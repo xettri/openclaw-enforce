@@ -1,0 +1,33 @@
+# Rust
+/target/
+**/*.rs.bk
+*.pdb
+Cargo.lock
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Test artifacts
+/test-output/
+/coverage/
+
+# Build artifacts
+/dist/
+/build/
+
+# Local config
+policy.local.toml
+*.local.*
+pnpm-lock.yaml
+node_modules

@@ -1,0 +1,188 @@
+syntax = "proto3";
+
+package openclaw.enforce;
+
+// Security enforcement service
+service EnforcementService {
+    // File system operations
+    rpc ReadFile(ReadFileRequest) returns (ReadFileResponse);
+    rpc WriteFile(WriteFileRequest) returns (WriteFileResponse);
+    rpc ListDirectory(ListDirectoryRequest) returns (ListDirectoryResponse);
+    rpc DeleteFile(DeleteFileRequest) returns (DeleteFileResponse);
+    
+    // Network operations
+    rpc HttpRequest(HttpRequestData) returns (HttpResponseData);
+    rpc DnsLookup(DnsLookupRequest) returns (DnsLookupResponse);
+    
+    // Process execution
+    rpc ExecuteCommand(ExecuteCommandRequest) returns (ExecuteCommandResponse);
+    
+    // Capability management
+    rpc RequestCapability(CapabilityRequest) returns (CapabilityResponse);
+    rpc RevokeCapability(RevokeRequest) returns (RevokeResponse);
+    
+    // Health and status
+    rpc GetStatus(StatusRequest) returns (StatusResponse);
+    rpc GetAuditLogs(AuditLogRequest) returns (stream AuditLogEntry);
+}
+
+// File system messages
+message ReadFileRequest {
+    string path = 1;
+    Capability capability = 2;
+}
+
+message ReadFileResponse {
+    bytes data = 1;
+    SecurityStatus status = 2;
+}
+
+message WriteFileRequest {
+    string path = 1;
+    bytes data = 2;
+    Capability capability = 3;
+}
+
+message WriteFileResponse {
+    SecurityStatus status = 1;
+}
+
+message ListDirectoryRequest {
+    string path = 1;
+    Capability capability = 2;
+}
+
+message ListDirectoryResponse {
+    repeated FileEntry entries = 1;
+    SecurityStatus status = 2;
+}
+
+message FileEntry {
+    string name = 1;
+    string path = 2;
+    bool is_directory = 3;
+    uint64 size = 4;
+}
+
+message DeleteFileRequest {
+    string path = 1;
+    Capability capability = 2;
+}
+
+message DeleteFileResponse {
+    SecurityStatus status = 1;
+}
+
+// Network messages
+message HttpRequestData {
+    string url = 1;
+    string method = 2;
+    map<string, string> headers = 3;
+    bytes body = 4;
+    Capability capability = 5;
+}
+
+message HttpResponseData {
+    int32 status_code = 1;
+    map<string, string> headers = 2;
+    bytes body = 3;
+    SecurityStatus security_status = 4;
+}
+
+message DnsLookupRequest {
+    string hostname = 1;
+    Capability capability = 2;
+}
+
+message DnsLookupResponse {
+    repeated string ip_addresses = 1;
+    SecurityStatus status = 2;
+}
+
+// Process execution messages
+message ExecuteCommandRequest {
+    string command = 1;
+    repeated string args = 2;
+    map<string, string> env = 3;
+    string working_dir = 4;
+    Capability capability = 5;
+}
+
+message ExecuteCommandResponse {
+    int32 exit_code = 1;
+    string stdout = 2;
+    string stderr = 3;
+    SecurityStatus status = 4;
+}
+
+// Capability messages
+message Capability {
+    string token = 1;
+    string session_id = 2;
+    repeated string permissions = 3;
+    int64 expires_at = 4;  // Unix timestamp
+}
+
+message CapabilityRequest {
+    string session_id = 1;
+    repeated string requested_permissions = 2;
+    int64 duration_seconds = 3;
+}
+
+message CapabilityResponse {
+    Capability capability = 1;
+    SecurityStatus status = 2;
+}
+
+message RevokeRequest {
+    string token = 1;
+}
+
+message RevokeResponse {
+    SecurityStatus status = 1;
+}
+
+// Status and audit messages
+message StatusRequest {}
+
+message StatusResponse {
+    string version = 1;
+    bool healthy = 2;
+    PolicyInfo active_policy = 3;
+    ResourceUsage resources = 4;
+}
+
+message PolicyInfo {
+    string path = 1;
+    int64 loaded_at = 2;
+}
+
+message ResourceUsage {
+    uint64 memory_bytes = 1;
+    double cpu_percent = 2;
+    uint32 active_connections = 3;
+}
+
+message AuditLogRequest {
+    int64 since_timestamp = 1;
+    string session_id = 2;
+    repeated string event_types = 3;
+}
+
+message AuditLogEntry {
+    int64 timestamp = 1;
+    string event_type = 2;
+    string session_id = 3;
+    string operation = 4;
+    string resource = 5;
+    bool allowed = 6;
+    string reason = 7;
+    map<string, string> metadata = 8;
+}
+
+// Common messages
+message SecurityStatus {
+    bool allowed = 1;
+    string reason = 2;
+    repeated string violations = 3;
+}

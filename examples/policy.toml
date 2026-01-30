@@ -1,0 +1,54 @@
+# OpenClaw Enforce Security Policy
+
+[filesystem]
+allowed_read = [
+    "/tmp/openclaw",
+    "/tmp/test-allowed",
+    "/home/user/Documents",
+    "/home/user/workspace",
+]
+
+allowed_write = [
+    "/tmp/openclaw",
+    "/home/user/workspace/output",
+]
+
+# Patterns that are always denied
+denied_patterns = [
+    "*.key",
+    "*.pem",
+    "*.p12",
+    "/etc/*",
+    "/home/*/.ssh/*",
+    "*.env",
+]
+
+[network]
+allowed_domains = [
+    "api.anthropic.com",
+    "api.openai.com",
+    "github.com",
+    "api.github.com",
+]
+
+blocked_ips = []
+max_connections = 10
+
+[process]
+allowed_commands = [
+    "git",
+    "npm",
+    "node",
+    "ls",
+    "cat",
+    "grep",
+    "find",
+    "echo",
+]
+
+max_cpu_percent = 50
+max_memory_mb = 2048
+
+[resources]
+max_file_size_mb = 100
+max_open_files = 1000

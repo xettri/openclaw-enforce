@@ -1,0 +1,22 @@
+{
+  "name": "openclaw-enforce-example",
+  "version": "1.0.0",
+  "description": "Example client for OpenClaw Enforce security daemon",
+  "main": "example.js",
+  "scripts": {
+    "example": "node example.js",
+    "interactive": "node interactive.js",
+    "test": "node example.js"
+  },
+  "keywords": [
+    "openclaw",
+    "security",
+    "grpc"
+  ],
+  "author": "OpenClaw Security Team",
+  "license": "MIT",
+  "dependencies": {
+    "@grpc/grpc-js": "^1.9.0",
+    "@grpc/proto-loader": "^0.7.10"
+  }
+}
