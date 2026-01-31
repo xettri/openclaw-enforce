@@ -1,229 +1,302 @@
 # OpenClaw Enforce
 
-Security enforcement layer for OpenClaw AI Assistant
+**Native Node.js security enforcement module**
 
----
+A lightweight, high-performance security layer written in Rust that provides OS-level sandboxing for Node.js applications.
 
-## 🎯 Overview
+## Features
 
-OpenClaw Enforce is a **lightweight**, **high-performance** security daemon written in Rust that provides OS-level sandboxing and policy enforcement for AI assistants. It addresses critical security concerns around **prompt injection** and **unauthorized resource access** by enforcing strict, auditable policies.
-
-### Why OpenClaw Enforce?
-
-JavaScript/Node.js applications traditionally run with full user-level permissions:
-
-- ❌ Unrestricted file system access
-- ❌ Unrestricted network access
-- ❌ Unrestricted process execution
-- ❌ Vulnerable to prompt injection attacks
-
-**OpenClaw Enforce provides:**
-
-- ✅ Process-level isolation (Rust ↔ Node.js boundary)
-- ✅ Declarative security policies (TOML)
-- ✅ Defense in depth architecture
-- ✅ Only 1.3 MB binary, ~8 MB RAM
-
-## ✨ Features
-
-### Core Security
-
-- 🔒 **File System Isolation** - Whitelist/blacklist with glob patterns
+- 🔒 **File System Control** - Whitelist/blacklist paths with pattern matching
 - 🌐 **Network Security** - Domain filtering and connection limits
-- ⚙️ **Process Sandboxing** - Command whitelisting and resource limits
-- 🎫 **Capability Tokens** - Time-limited, revocable permissions (planned)
-- 📝 **Audit Logging** - Tamper-evident security trails (planned)
+- ⚙️ **Process Control** - Command whitelisting and resource limits
+- ⚡ **Zero Overhead** - Native Rust performance
+- 🎯 **Simple API** - Just `require()` and use
+- 📦 **Tiny** - Only 509KB native module
+- 🔐 **Memory Safe** - Built with Rust
+- ✅ **TypeScript** - Full type definitions included
 
-### Developer Experience
-
-- 🚀 **gRPC Interface** - High-performance IPC
-- 📦 **Small Footprint** - 1.3 MB binary, 8 MB RAM
-- ⚡ **Fast** - <2ms overhead per operation
-- 🧪 **Interactive Testing** - Real-time policy testing CLI
-- 📚 **Well Documented** - Comprehensive guides and examples
-
-## 🚀 Quick Start
-
-### Installation
-
-**Prerequisites:**
-
-- Rust 1.70+ ([Install Rust](https://rustup.rs/))
-- Protocol Buffers compiler
+## Installation
 
 ```bash
-# macOS
-brew install protobuf
-
-# Linux (Debian/Ubuntu)
-sudo apt-get install protobuf-compiler
-
-# Linux (Fedora/RHEL)
-sudo dnf install protobuf-compiler
+npm install openclaw-enforce
 ```
 
-**Build from source:**
-
-```bash
-git clone https://github.com/xettri/openclaw-enforce.git
-cd openclaw-enforce
-cargo build --release
-```
-
-Binary will be at: `target/release/openclaw-enforce` (1.3 MB)
-
-### Running
-
-```bash
-# Start the daemon
-./target/release/openclaw-enforce --config examples/policy.toml
-
-# In another terminal, test it
-cd examples
-npm install
-npm run interactive
-```
-
-See **[QUICKSTART.md](QUICKSTART.md)** for a 5-minute tutorial.
-
-## 🎮 Interactive Demo
-
-Try the interactive testing tool to see security enforcement in action:
-
-```bash
-cd examples
-npm run interactive
-```
-
-See **[examples/INTERACTIVE.md](examples/INTERACTIVE.md)** for full guide.
-
-## 🔧 Usage
-
-### Command Line
-
-```bash
-# Start server with custom config
-openclaw-enforce --config /etc/openclaw-enforce/policy.toml
-
-# Validate policy without starting
-openclaw-enforce --config policy.toml --validate
-
-# Show policy summary
-openclaw-enforce --config policy.toml --show-policy
-
-# Adjust log level
-openclaw-enforce --log-level debug
-
-# Show version
-openclaw-enforce --version
-```
-
-### Integration
+## Quick Start
 
 ```javascript
-const grpc = require("@grpc/grpc-js");
-const protoLoader = require("@grpc/proto-loader");
+const { EnforcementEngine } = require("openclaw-enforce");
 
-// Load protobuf
-const proto = grpc.loadPackageDefinition(
-  protoLoader.loadSync("proto/enforce.proto"),
-);
-
-// Create client
-const client = new proto.openclaw.enforce.EnforcementService(
-  "localhost:50051",
-  grpc.credentials.createInsecure(),
-);
+// Load security policy
+const enforce = new EnforcementEngine("./policy.toml");
 
 // Read file with security check
-client.ReadFile({ path: "/tmp/myfile.txt" }, (err, response) => {
-  if (response.status.allowed) {
-    console.log("File contents:", response.data.toString());
-  } else {
-    console.log("Access denied:", response.status.reason);
-  }
-});
+const result = enforce.readFileSync("/path/to/file.txt");
+
+if (result.status.allowed) {
+  console.log("Content:", result.data.toString());
+} else {
+  console.error("Access denied:", result.status.reason);
+}
 ```
 
-See **[examples/README.md](examples/README.md)** for complete integration guide.
+## Usage
 
-## 📊 Performance
+### Basic File Reading
 
-| Metric           | Value  |
-| ---------------- | ------ |
-| Binary Size      | 1.3 MB |
-| Memory Usage     | ~8 MB  |
-| Latency Overhead | <2 ms  |
+```javascript
+const { EnforcementEngine } = require("openclaw-enforce");
 
-**Comparison to alternatives:**
+const enforce = new EnforcementEngine("./policy.toml");
 
-| Solution               | Size       | RAM      | Security             |
-| ---------------------- | ---------- | -------- | -------------------- |
-| **OpenClaw Enforce**   | **1.3 MB** | **8 MB** | ✅ Process isolation |
-| Native addon (napi-rs) | 800 KB     | 5 MB     | ❌ Same process      |
-| Python + gRPC          | 50 MB      | 30 MB    | ✅ Process isolation |
+// Read file
+const result = enforce.readFileSync("/tmp/myfile.txt");
+if (result.status.allowed) {
+  const content = result.data.toString();
+}
+```
 
-## 🔒 Security
+### Check Access
 
-### Threat Model
+```javascript
+// Check without reading
+const status = enforce.canRead("/etc/passwd");
 
-OpenClaw Enforce defends against:
+console.log("Allowed:", status.allowed);
+console.log("Reason:", status.reason);
+console.log("Violations:", status.violations);
+```
 
-- ✅ Prompt injection causing malicious file access
-- ✅ Accidental access to sensitive files
-- ✅ Unauthorized network requests
-- ✅ Resource exhaustion attacks
+### Network Security
 
-### Security Features
+```javascript
+// Check if network request is allowed
+const netResult = enforce.canNetworkRequest("api.openai.com");
 
-- **Fail-secure design** - Deny by default
-- **Process isolation** - Separate from Node.js
-- **Memory safety** - Written in Rust
-- **Policy validation** - Checked on startup
-- **Audit trail** - All decisions logged (planned)
+if (netResult.allowed) {
+  console.log("Network request allowed");
+} else {
+  console.error("Blocked:", netResult.reason);
+}
+```
 
-### Reporting Vulnerabilities
+### Process Control
 
-**Do not report security issues publicly.** Email: security@openclaw.dev
+```javascript
+// Check if command execution is allowed
+const procResult = enforce.canExecuteCommand("git");
 
-See **[SECURITY.md](SECURITY.md)** for our security policy.
+if (procResult.allowed) {
+  console.log("Command allowed");
+} else {
+  console.error("Blocked:", procResult.reason);
+}
+```
 
-## 🛠️ Development
+### Policy Stats
 
-### Build
+```javascript
+const stats = JSON.parse(enforce.getPolicyStats());
+console.log("Allowed paths:", stats.filesystem.allowed_read);
+console.log("Denied patterns:", stats.filesystem.denied_patterns);
+```
+
+### Complete Example
+
+```javascript
+const { EnforcementEngine } = require("openclaw-enforce");
+
+const enforce = new EnforcementEngine("./policy.toml");
+
+// File access
+const file = enforce.readFileSync("/path/to/file.txt");
+if (file.status.allowed) {
+  console.log(file.data.toString());
+}
+
+// Network access
+const net = enforce.canNetworkRequest("api.anthropic.com");
+if (!net.allowed) {
+  throw new Error(`Network denied: ${net.reason}`);
+}
+
+// Process execution
+const proc = enforce.canExecuteCommand("npm");
+if (!proc.allowed) {
+  throw new Error(`Command denied: ${proc.reason}`);
+}
+```
+
+## Standalone Functions (One-Shot API)
+
+For quick, one-off checks without creating an engine instance:
+
+### File Operations
+
+```javascript
+const { readFileSecure, checkReadAccess } = require("openclaw-enforce");
+
+// Read file with security check (one-liner)
+const result = readFileSecure("./policy.toml", "/path/to/file.txt");
+
+// Just check access without reading
+const status = checkReadAccess("./policy.toml", "/etc/passwd");
+```
+
+### Network Operations
+
+```javascript
+const { checkNetworkRequest } = require("openclaw-enforce");
+
+// Check if domain is allowed
+const result = checkNetworkRequest("./policy.toml", "api.openai.com");
+if (!result.allowed) {
+  throw new Error(`Network denied: ${result.reason}`);
+}
+```
+
+### Process Operations
+
+```javascript
+const { checkCommandExecution } = require("openclaw-enforce");
+
+// Check if command is allowed
+const result = checkCommandExecution("./policy.toml", "git");
+if (!result.allowed) {
+  throw new Error(`Command denied: ${result.reason}`);
+}
+```
+
+**When to use:**
+
+- ✅ One-off checks in scripts
+- ✅ Lambda/serverless functions
+- ✅ CLI tools
+- ❌ Repeated checks (use `EnforcementEngine` class instead)
+
+## Policy Configuration
+
+Create a `policy.toml` file:
+
+```toml
+[filesystem]
+allowed_read = [
+    "/tmp/openclaw",
+    "/home/user/Documents",
+]
+
+allowed_write = [
+    "/tmp/openclaw/output",
+]
+
+denied_patterns = [
+    "*.key",
+    "*.pem",
+    "/etc/*",
+]
+
+[network]
+allowed_domains = [
+    "api.anthropic.com",
+    "api.openai.com",
+]
+
+max_connections = 10
+
+[process]
+allowed_commands = ["git", "npm", "node"]
+max_cpu_percent = 50
+max_memory_mb = 2048
+```
+
+## API Reference
+
+### EnforcementEngine
+
+```typescript
+class EnforcementEngine {
+  constructor(policyPath: string);
+
+  readFileSync(path: string): ReadFileResult;
+  canRead(path: string): SecurityStatus;
+  canWrite(path: string): SecurityStatus;
+  canNetworkRequest(domain: string): NetworkCheckResult;
+  canExecuteCommand(command: string): ProcessCheckResult;
+  getPolicyStats(): string;
+}
+
+interface ReadFileResult {
+  data: Buffer | null;
+  status: SecurityStatus;
+}
+
+interface SecurityStatus {
+  allowed: boolean;
+  reason: string;
+  violations: string[];
+}
+
+interface NetworkCheckResult {
+  allowed: boolean;
+  reason: string;
+  violations: string[];
+}
+
+interface ProcessCheckResult {
+  allowed: boolean;
+  reason: string;
+  violations: string[];
+}
+```
+
+### Standalone Functions
+
+```typescript
+// One-off operations
+readFileSecure(policyPath: string, filePath: string): ReadFileResult;
+checkReadAccess(policyPath: string, filePath: string): SecurityStatus;
+checkNetworkRequest(policyPath: string, domain: string): NetworkCheckResult;
+checkCommandExecution(policyPath: string, command: string): ProcessCheckResult;
+```
+
+## Development
+
+### Building from Source
 
 ```bash
-# Debug build
-cargo build
+# Install dependencies
+npm install
 
-# Release build (optimized)
-cargo build --release
+# Build native module
+npm run build
 
 # Run tests
-cargo test
-
-# Check code
-cargo clippy
-cargo fmt --check
+npm test
 ```
 
-### Development Setup
+### Project Structure
 
-```bash
-# Fork and clone
-git clone https://github.com/YOUR_USERNAME/openclaw-enforce.git
-cd openclaw-enforce
+```
+openclaw-enforce/
+├── src/
+│   ├── lib.rs          # NAPI bindings
+│   ├── fs/             # File validation
+│   └── policy/         # Policy parsing
+├── index.js            # Platform loader
+├── index.d.ts          # TypeScript definitions
+└── examples/           # Usage examples
 ```
 
-# Create branch
+## Security
 
-git checkout -b feature/my-feature
+This module provides:
 
-# Make changes, test
+- ✅ Rust memory safety
+- ✅ Policy-driven access control
+- ✅ Path canonicalization (prevents `../../../` attacks)
+- ✅ Pattern-based denials
 
-cargo test
-cargo clippy
+**Note:** Runs in same process as Node.js. For maximum isolation, consider the separate daemon version.
 
-## 📜 License
+## License
 
 MIT

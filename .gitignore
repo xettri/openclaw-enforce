@@ -31,3 +31,6 @@ policy.local.toml
 *.local.*
 pnpm-lock.yaml
 node_modules
+
+# Native bindings (built locally, published via npm)
+*.node

@@ -1,0 +1,6 @@
+# Don't include build artifacts in npm package
+target/
+build.sh
+
+# Do include the native bindings
+!*.node

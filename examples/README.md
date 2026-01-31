@@ -1,163 +1,95 @@
-# JavaScript Examples
+# Examples
 
-This directory contains JavaScript examples showing how to integrate with OpenClaw Enforce from Node.js applications.
+## NAPI Example
 
-## Quick Start
+Simple example showing how to use OpenClaw Enforce as a native Node.js module.
 
-### 1. Install Dependencies
-
-```bash
-cd examples
-npm install
-```
-
-### 2. Start the Daemon
-
-In another terminal:
+### Quick Start
 
 ```bash
-cd ..
-cargo run --release -- --config examples/policy.toml
+# From project root
+cargo build --release
+
+# Run the example
+node examples/napi-example.js
 ```
 
-### 3. Run the Example
+### What It Does
+
+The example demonstrates:
+
+1. **Loading the policy** - Create an `EnforcementEngine` instance
+2. **Reading allowed files** - Files in `/tmp/test-allowed/` can be read
+3. **Blocking denied paths** - System files like `/etc/passwd` are blocked
+4. **Pattern matching** - Files like `*.key` are blocked even in allowed directories
+
+### Expected Output
+
+```
+🔐 OpenClaw Enforce - Native Module Example
+
+✅ Enforcement engine loaded
+📋 Policy stats: {"filesystem":{"allowed_read":4,...}}
+
+📝 Example 1: Reading allowed file
+   ✅ Access granted
+   📄 Content: Hello from OpenClaw Enforce! 🔐...
+
+📝 Example 2: Trying to read /etc/passwd
+   ✅ Correctly denied: Path not in allowed read list
+
+📝 Example 3: Checking access to .key file
+   ✅ Correctly denied: Path not in allowed read list
+   Violations: path_not_allowed
+
+🎉 All examples complete!
+```
+
+## Usage in Your Project
+
+### Installation
 
 ```bash
-npm run example
+npm install @openclaw/enforce
 ```
 
-## What the Example Demonstrates
-
-The `example.js` script shows:
-
-1. **Health Check** - Verifying the daemon is running
-2. **Status Query** - Getting daemon version and policy info
-3. **Allowed File Read** - Successfully reading from `/tmp/test-allowed/`
-4. **Denied Pattern** - Blocking `*.key` files even in allowed paths
-5. **Path Whitelisting** - Blocking access to `/etc/passwd`
-
-## Example Output
-
-```
-╔════════════════════════════════════════════════════════════╗
-║       OpenClaw Enforce - JavaScript Integration Example   ║
-╚════════════════════════════════════════════════════════════╝
-
-✅ Connected to daemon
-
-📋 Example 1: Checking daemon health...
-   ✅ Daemon is healthy: SERVING
-
-📋 Example 2: Getting daemon status...
-   ✅ Status retrieved:
-      Version: 0.1.0
-      Healthy: true
-      Policy: policy.toml
-
-📋 Example 3: Reading file in allowed path...
-   ✅ File read successful!
-      Content: "Hello from OpenClaw Enforce! 🔐"
-      Size: 36 bytes
-
-📋 Example 4: Attempting to read .key file (should be denied)...
-   ✅ Access correctly denied!
-      Reason: Path not in allowed read list
-      This proves .key files are blocked by policy
-
-📋 Example 5: Attempting to read /etc/passwd (should be denied)...
-   ✅ Access correctly denied!
-      Reason: Path not in allowed read list
-      This proves path whitelisting works
-```
-
-## Example Files
-
-### `example.js` (Automated Demo)
-
-Demonstrates all features with automated tests:
-
-- Health checks
-- File read (allowed paths)
-- File read (denied patterns)
-- File read (outside allowed paths)
-
-**Run:** `npm run example`
-
-### `interactive.js` (Interactive Testing) ⭐
-
-**NEW!** Interactive CLI tool to test paths in real-time:
-
-```bash
-npm run interactive
-```
-
-**Features:**
-
-- Test any file path interactively
-- See instant allow/deny decisions
-- Run batch tests on common paths
-- View current policy
-- Track statistics
-- Create test files
-- **Perfect for experimenting and demos!**
-
-See [INTERACTIVE.md](INTERACTIVE.md) for full guide.
-
-## Basic Integration
-
-### Install Dependencies
-
-```bash
-npm install @grpc/grpc-js @grpc/proto-loader
-```
-
-### Basic Integration
+### Basic Usage
 
 ```javascript
-const grpc = require("@grpc/grpc-js");
-const protoLoader = require("@grpc/proto-loader");
-const path = require("path");
+const { EnforcementEngine } = require("@openclaw/enforce");
 
-// Load protobuf
-const PROTO_PATH = path.join(__dirname, "path/to/enforce.proto");
-const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
-  keepCase: true,
-  longs: String,
-  enums: String,
-  defaults: true,
-  oneofs: true,
-});
+// Create engine with policy file
+const enforce = new EnforcementEngine("./config/policy.toml");
 
-const proto = grpc.loadPackageDefinition(packageDefinition);
+// Read file with security check
+const result = enforce.readFileSync("/path/to/file.txt");
 
-// Create client
-const client = new proto.openclaw.enforce.EnforcementService(
-  "localhost:50051",
-  grpc.credentials.createInsecure(),
-);
-
-// Read a file securely
-client.ReadFile({ path: "/tmp/myfile.txt" }, (err, response) => {
-  if (err) {
-    console.error("Error:", err.message);
-  } else if (response.status.allowed) {
-    console.log("File contents:", response.data.toString());
-  } else {
-    console.log("Access denied:", response.status.reason);
-  }
-});
+if (result.status.allowed) {
+  console.log("Content:", result.data.toString());
+} else {
+  console.error("Access denied:", result.status.reason);
+}
 ```
 
-## Available Methods
+### Check Access Without Reading
 
-See `proto/enforce.proto` for the complete API:
+```javascript
+// Just check permissions
+const status = enforce.canRead("/etc/passwd");
 
-- `ReadFile` - Read file with security checks
-- `WriteFile` - Write file with security checks (planned)
-- `ExecuteCommand` - Execute command with whitelisting (planned)
-- `HttpRequest` - Make HTTP request with domain filtering (planned)
-- `GetStatus` - Get daemon status
-- `RequestCapability` - Request time-limited permissions (planned)
+if (!status.allowed) {
+  console.log("Blocked:", status.reason);
+  console.log("Violations:", status.violations);
+}
+```
+
+### Get Policy Statistics
+
+```javascript
+const stats = JSON.parse(enforce.getPolicyStats());
+console.log("Allowed read paths:", stats.filesystem.allowed_read);
+console.log("Denied patterns:", stats.filesystem.denied_patterns);
+```
 
 ## Policy Configuration
 
@@ -167,40 +99,79 @@ Edit `examples/policy.toml` to customize security rules:
 [filesystem]
 allowed_read = [
     "/tmp/test-allowed",
-    "/home/user/safe-directory",
+    "/home/user/Documents",
 ]
 
 denied_patterns = [
     "*.key",
     "*.pem",
-    "*.env",
+    "/etc/*",
 ]
 ```
 
+## API Reference
+
+See `index.d.ts` for complete TypeScript definitions.
+
+### EnforcementEngine
+
+```typescript
+class EnforcementEngine {
+  constructor(policyPath: string);
+  readFileSync(path: string): ReadFileResult;
+  canRead(path: string): SecurityStatus;
+  canWrite(path: string): SecurityStatus;
+  getPolicyStats(): string;
+}
+```
+
+### Types
+
+```typescript
+interface SecurityStatus {
+  allowed: boolean;
+  reason: string;
+  violations: string[];
+}
+
+interface ReadFileResult {
+  data: Buffer | null;
+  status: SecurityStatus;
+}
+```
+
+## Tips
+
+- **Test your policy** - Use `canRead()` to test paths before reading
+- **Handle errors** - Always check `status.allowed` before using `data`
+- **Monitor violations** - Log `status.violations` to track security issues
+- **Update policy** - Restart your app after changing `policy.toml`
+
 ## Troubleshooting
 
-### "Could not connect to OpenClaw Enforce daemon"
+### "Cannot find module '../index'"
 
-Make sure the daemon is running:
-
-```bash
-cargo run --release -- --config examples/policy.toml
-```
-
-### "Access denied"
-
-Check that the path is in `allowed_read` in your policy file and doesn't match any `denied_patterns`.
-
-### Module errors
-
-Install dependencies:
+Make sure you've built the native module:
 
 ```bash
-npm install
+cargo build --release
 ```
 
-## Learn More
+### "Failed to load policy"
 
-- `../ARCHITECTURE.md` - System design and components
-- `../README.md` - Full project documentation
-- `../proto/enforce.proto` - Complete API specification
+Check that the policy file path is correct and the TOML syntax is valid:
+
+```bash
+# Validate policy
+./target/release/openclaw-enforce --validate --config examples/policy.toml
+```
+
+### "Access denied" for allowed path
+
+- Verify the path is in `allowed_read` in your policy file
+- Check for typos in the path
+- Ensure denied patterns aren't blocking it
+
+---
+
+**Ready to secure your OpenClaw application!** 🔐

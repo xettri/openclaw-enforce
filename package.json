@@ -1,0 +1,44 @@
+{
+  "name": "openclaw-enforce",
+  "version": "0.1.0",
+  "description": "Native security enforcement module for OpenClaw AI assistant",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "scripts": {
+    "artifacts": "napi artifacts",
+    "build": "napi build --platform --release",
+    "build:debug": "napi build --platform",
+    "prepublishOnly": "napi prepublish -t npm",
+    "test": "node examples/index.js",
+    "version": "napi version"
+  },
+  "napi": {
+    "name": "openclaw-enforce",
+    "triples": {}
+  },
+  "keywords": [
+    "security",
+    "enforcement",
+    "openclaw",
+    "sandbox",
+    "napi",
+    "native"
+  ],
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "*.node"
+  ],
+  "author": "OpenClaw Security Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openclaw/openclaw-enforce.git"
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "^2.18.0"
+  },
+  "engines": {
+    "node": ">= 16"
+  }
+}
